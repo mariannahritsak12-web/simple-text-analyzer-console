@@ -53,19 +53,20 @@ def avg_word_len(text):
 # Generate report containing all information about proccessed text
 def generateReport(words, letters, top_words, avg_len):
     report = {
-        'Words:':words, 'Letters':letters, 'Top Words:':top_words, 
-        'Average Word Length:':avg_len
+        'Words':words, 'Letters':letters, 'Top Words':top_words, 
+        'Average Word Length':avg_len
     }
 
     return report
 
 # Export to csv
 def export_to_csv(report, filename):
-    with open(filename, "w") as csv_file:
-        writer = csv.writer(csv_file)
-        for key, value in report.items():
-            writer.writerow([key, value])
-    
+    keys = report.keys()
+    with open(filename, "w+", newline='', encoding='utf-8') as report_file:
+        dict_writer = csv.DictWriter(report_file, fieldnames=keys)
+        dict_writer.writeheader()
+        dict_writer.writerow(report)
+        
 
 # Main function
 if __name__ == "__main__":
