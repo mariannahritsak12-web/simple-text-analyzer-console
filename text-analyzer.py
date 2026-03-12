@@ -1,104 +1,129 @@
 import string
 import csv
-import os
 
-# Load the text from the specified file
-def load_text(file_location):
-    with open(file_location, "r") as text_file:
-        return text_file.read()
+class TextAnalyzer:
+    def __init__(self, file_location):
+        self.file_location = file_location
+        self.text = self._load_text()
+        self.clean_text = self._preprocess_text(self.text)
 
-# Split the text into words, remove punctuation and convert to lowercase
-def preprocess_text(text):
-    text = text.lower()
-    normalized_text = "".join(c for c in text if c not in string.punctuation)
-    split_text = normalized_text.split()
-    return split_text
+    # Load the text from the specified file
+    def _load_text(self):
+        try:  
+            with open(self.file_location, "r", encoding='utf-8') as text_file:
+                return text_file.read()
+        except FileNotFoundError:
+            print(f'Nie można znaleźć pliku: {self.file_location}')
+            return ""
 
-# Count words in the given text
-def count_words(text):
-    STOP_WORDS = {'a', 'an', 'the', 'and', 'or', 'but', 'if', 'while', 'with', 'to', 'of'}
-    words = preprocess_text(text)
-    filtered_words = [word for word in words if word not in STOP_WORDS]
-    return len(filtered_words)
+    # Split the text into words, remove punctuation and convert to lowercase
+    def _preprocess_text(self, text):
+        text = self.text.lower()
+        normalized_text = "".join(c for c in text if c not in string.punctuation)
+        split_text = normalized_text.split()
+        return split_text
 
-# Count letters
-def count_letters(text):
-    letters = 0
-    for char in text:
-        if char.isalpha():
-            letters += 1
-    return letters
+    # Count words in the given text
+    def count_words(self, text):
+        STOP_WORDS = {'a', 'an', 'the', 'and', 'or', 'but', 'if', 'while', 'with', 'to', 'of'}
+        words = self._preprocess_text(text)
+        filtered_words = [word for word in words if word not in STOP_WORDS]
+        return len(filtered_words)
 
-# Word frequency
-def top_words(text, n):
-    words = text.lower().split()
-    top_words = {}
+    # Count letters
+    def count_letters(self, text):
+        letters = 0
+        for char in text:
+            if char.isalpha():
+                letters += 1
+        return letters
 
-    for word in words:
-        if word not in top_words:
-            top_words[word] = 0
-        top_words[word] += 1
+    # Word frequency
+    def top_words(self, text, n):
+        words = self._preprocess_text(text)
+        top_words = {}
 
-    return sorted(top_words.items(), key=lambda x: x[1], reverse=True)[:n]
+        for word in words:
+            if word not in top_words:
+                top_words[word] = 0
+            top_words[word] += 1
 
-# Average words lenghth
-def avg_word_len(text):
-    words = text.split()
-    total_lenghth = 0
+        return sorted(top_words.items(), key=lambda x: x[1], reverse=True)[:n]
 
-    for word in words:
-        total_lenghth += len(word)
-    
-    return total_lenghth / len(words)
+    # Format the top words for better presentation
+    def formatted_top_words(self, word_list):
+        formatted = "".join(f"\n\t- {word}: {count}" for word, count in word_list)
+        return formatted            
 
-# Count the number of sentences in the text
-def count_sentences(text):
-    sentence_endings = ['.', '!', '?']
-    sentences = 0
-    
-    for char in text:
-      if char in sentence_endings:
-          sentences += 1
+    # Average words lenghth
+    def avg_word_len(self, text):
+        words = self._preprocess_text(text)
+        total_lenghth = 0
 
-    return sentences
-
-# Unique words in the text
-def unique_words():
-    words = preprocess_text(text)
-    unique_words = set()
-
-    for word in words:
-        if word not in unique_words:
-            unique_words.add(word)
+        for word in words:
+            total_lenghth += len(word)
         
-    return len(unique_words)
+        return round(total_lenghth / len(words), 2) if words else 0
 
-# Generate report containing all information about proccessed text
-def generateReport(words, letters, top_words, avg_len):
-    report = {
-        'Words':words, 'Letters':letters, 'Top Words':top_words, 
-        'Average Word Length':avg_len
-    }
-
-    return report
-
-# Export to csv
-def export_to_csv(report, filename):
-    keys = report.keys()
-    with open(filename, "w+", newline='', encoding='utf-8') as report_file:
-        dict_writer = csv.DictWriter(report_file, fieldnames=keys)
-        dict_writer.writeheader()
-        dict_writer.writerow(report)
+    # Count the number of sentences in the text
+    def count_sentences(self, text):
+        sentence_endings = ['.', '!', '?']
+        sentences = 0
         
+        for char in text:
+            if char in sentence_endings:
+                sentences += 1
 
-# Main function
+        return sentences
+
+    # Unique words in the text
+    def unique_words(self, text):
+        words = self._preprocess_text(text)
+        unique_words = set()
+
+        for word in words:
+            if word not in unique_words:
+                unique_words.add(word)
+            
+        return len(unique_words)
+
+    # Generate report containing all information about proccessed text
+    def generateReport(self, sentences, words, letters, top_words, avg_len):
+        report = {
+            'Sentences':sentences, 'Words':words, 'Letters':letters, 'Top Words':self.formatted_top_words(top_words), 
+            'Average Word Length':avg_len
+        }
+
+        return report
+
+    # Export to csv
+    def export_to_csv(self, report, filename):
+        keys = report.keys()
+        with open(filename, "w+", newline='', encoding='utf-8') as report_file:
+            dict_writer = csv.DictWriter(report_file, fieldnames=keys)
+            dict_writer.writeheader()
+            dict_writer.writerow(report)
+            
+
+def run_text_analyzer():
+    path = input("Podaj ścieżkę do pliku tekstowego: ")
+    analyzer = TextAnalyzer(path)
+
+    sentences = analyzer.count_sentences(analyzer.text)
+    words = analyzer.count_words(analyzer.text)
+    letters = analyzer.count_letters(analyzer.text)
+    top_words = analyzer.top_words(analyzer.text, 5)
+    avg_len = analyzer.avg_word_len(analyzer.text)
+    unique_words = analyzer.unique_words(analyzer.text)
+    report = analyzer.generateReport(sentences , words, letters, top_words, avg_len)
+    print("===REPORT===")
+    for key, value in report.items():
+        print(f"{key}: {value}")
+
+    save_as_csv = input("Czy chcesz zapisać raport do pliku CSV? (tak/nie): ")
+    if save_as_csv.lower() == "tak":
+        output_filename = input("Podaj nazwę pliku CSV (np. raport.csv): ")
+        analyzer.export_to_csv(report, output_filename)
+
 if __name__ == "__main__":
-    path = input('Podaj ścieżke do pliku tekstowego:')
-    text = load_text(path)
-    clean = clean_text(text)
-    words = count_words(clean)
-    letters = count_letters(clean)
-    top = top_words(clean, 10)
-    avg_len = avg_word_len(clean)
-    report = generateReport(words, letters, top, avg_len)
-    export_to_csv(report, 'report.csv')
+    run_text_analyzer()
