@@ -1,5 +1,7 @@
+import pandas as pd
 import string
 import csv
+import json     
 
 class TextAnalyzer:
     def __init__(self, file_location):
@@ -18,7 +20,7 @@ class TextAnalyzer:
 
     # Split the text into words, remove punctuation and convert to lowercase
     def _preprocess_text(self, text):
-        text = self.text.lower()
+        text = text.lower()
         normalized_text = "".join(c for c in text if c not in string.punctuation)
         split_text = normalized_text.split()
         return split_text
@@ -41,9 +43,10 @@ class TextAnalyzer:
     # Word frequency
     def top_words(self, text, n):
         words = self._preprocess_text(text)
+        clean_text = [word for word in words if word not in ('a', 'an', 'the', 'and', 'or', 'but', 'if', 'while', 'with', 'to', 'of', 'for', 'that', 'who', 'which', 'because', 'it', 'is', 'was', 'are')]
         top_words = {}
 
-        for word in words:
+        for word in clean_text:
             if word not in top_words:
                 top_words[word] = 0
             top_words[word] += 1
@@ -77,6 +80,7 @@ class TextAnalyzer:
         return sentences
 
     # Unique words in the text
+    # Update this method to use pandas for better performance
     def unique_words(self, text):
         words = self._preprocess_text(text)
         unique_words = set()
@@ -104,6 +108,11 @@ class TextAnalyzer:
             dict_writer.writeheader()
             dict_writer.writerow(report)
             
+    # Export to json
+    def export_to_json(self, report, filename):
+        with open(filename, "w+", encoding='utf-8') as report_file:
+            json.dump(report, report_file, ensure_ascii=False, indent=4)
+
 
 def run_text_analyzer():
     path = input("Podaj ścieżkę do pliku tekstowego: ")
@@ -120,10 +129,14 @@ def run_text_analyzer():
     for key, value in report.items():
         print(f"{key}: {value}")
 
-    save_as_csv = input("Czy chcesz zapisać raport do pliku CSV? (tak/nie): ")
-    if save_as_csv.lower() == "tak":
-        output_filename = input("Podaj nazwę pliku CSV (np. raport.csv): ")
-        analyzer.export_to_csv(report, output_filename)
+    save_to_file = input("Do you want to save the report to a file? (yes/no): ")
+    if save_to_file.lower() == "yes":
+        output_filename = input("Enter file name: ")
+        choice = input("Choose format (csv/json): ")
+        if choice.lower() == "csv":
+            analyzer.export_to_csv(report, output_filename)
+        elif choice.lower() == "json":
+            analyzer.export_to_json(report, output_filename)
 
 if __name__ == "__main__":
     run_text_analyzer()
