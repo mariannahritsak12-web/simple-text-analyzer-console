@@ -1,7 +1,13 @@
 import pandas as pd
 import string
 import csv
-import json     
+import json
+from matplotlib import pyplot as plt 
+import nltk
+from nltk.corpus import stopwords
+nltk.download('stopwords')
+from textblob import TextBlob
+
 
 class TextAnalyzer:
     def __init__(self, file_location):
@@ -27,9 +33,9 @@ class TextAnalyzer:
 
     # Count words in the given text
     def count_words(self, text):
-        STOP_WORDS = {'a', 'an', 'the', 'and', 'or', 'but', 'if', 'while', 'with', 'to', 'of'}
+        stop_words = set(stopwords.words('english'))
         words = self._preprocess_text(text)
-        filtered_words = [word for word in words if word not in STOP_WORDS]
+        filtered_words = [word for word in words if word not in stop_words]
         return len(filtered_words)
 
     # Count letters
@@ -43,7 +49,8 @@ class TextAnalyzer:
     # Word frequency
     def top_words(self, text, n):
         words = self._preprocess_text(text)
-        clean_text = [word for word in words if word not in ('a', 'an', 'the', 'and', 'or', 'but', 'if', 'while', 'with', 'to', 'of', 'for', 'that', 'who', 'which', 'because', 'it', 'is', 'was', 'are')]
+        stop_words = set(stopwords.words('english'))
+        clean_text = [word for word in words if word not in stop_words]
         top_words = {}
 
         for word in clean_text:
@@ -53,10 +60,21 @@ class TextAnalyzer:
 
         return sorted(top_words.items(), key=lambda x: x[1], reverse=True)[:n]
 
+    def top_words_pandas(self, text, n):
+        df = pd.DataFrame(self._preprocess_text(text), columns=['word'])
+        meaningful = df[df['word'].str.len() > 3]
+        word_series = meaningful['word'].value_counts().head(n)
+        return word_series.items()
+
     # Format the top words for better presentation
     def formatted_top_words(self, word_list):
         formatted = "".join(f"\n\t- {word}: {count}" for word, count in word_list)
         return formatted            
+
+    def n_grams(self, text, n):
+        words = self._preprocess_text(text)
+        n_grams = zip(*[words[i:] for i in range(n)])
+        return [" ".join(gram) for gram in n_grams]
 
     # Average words lenghth
     def avg_word_len(self, text):
@@ -92,13 +110,29 @@ class TextAnalyzer:
         return len(unique_words)
 
     # Generate report containing all information about proccessed text
-    def generateReport(self, sentences, words, letters, top_words, avg_len):
+    def generateReport(self, sentences, words, letters, top_words, avg_len, unique_words=None, lexical_diversity=None, sentiment=None):
         report = {
-            'Sentences':sentences, 'Words':words, 'Letters':letters, 'Top Words':self.formatted_top_words(top_words), 
-            'Average Word Length':avg_len
+            'Sentences':sentences, 
+            'Words':words, 
+            'Letters':letters, 
+            'Top Words':self.formatted_top_words(top_words), 
+            'Average Word Length':avg_len,
+            'Unique Words': unique_words,
+            'Lexical Diversity': lexical_diversity,
+            'Sentiment': sentiment
         }
 
         return report
+
+    def lexical_diversity(self, text):
+        words = self._preprocess_text(text)
+        unique_words = set(words)
+        return round(len(unique_words) / len(words), 2) if words else 0
+
+    def sentiment_analysis(self, text):
+        blob = TextBlob(text)
+        sentiment = blob.sentiment
+        return f"Polarity: {sentiment.polarity}, Subjectivity: {sentiment.subjectivity}"
 
     # Export to csv
     def export_to_csv(self, report, filename):
@@ -108,11 +142,24 @@ class TextAnalyzer:
             dict_writer.writeheader()
             dict_writer.writerow(report)
             
+    def save_report_to_csv(self, df, filename):
+        df.to_csv(filename, index=False, encoding='utf-8')
+        print(f"Report saved to {filename}")
+    
     # Export to json
     def export_to_json(self, report, filename):
         with open(filename, "w+", encoding='utf-8') as report_file:
             json.dump(report, report_file, ensure_ascii=False, indent=4)
 
+    def plot_word_frequencies(self, text, n):
+        word_freq = dict(self.top_words_pandas(text, n))
+        plt.bar(word_freq.keys(), word_freq.values())
+        plt.xlabel('Words')
+        plt.ylabel('Frequency')
+        plt.title('Top Word Frequencies')
+        plt.xticks(rotation=45)
+        plt.tight_layout()
+        plt.show()
 
 def run_text_analyzer():
     path = input("Podaj ścieżkę do pliku tekstowego: ")
@@ -124,7 +171,9 @@ def run_text_analyzer():
     top_words = analyzer.top_words(analyzer.text, 5)
     avg_len = analyzer.avg_word_len(analyzer.text)
     unique_words = analyzer.unique_words(analyzer.text)
-    report = analyzer.generateReport(sentences , words, letters, top_words, avg_len)
+    lexical_diversity = analyzer.lexical_diversity(analyzer.text)
+    sentiment = analyzer.sentiment_analysis(analyzer.text)
+    report = analyzer.generateReport(sentences , words, letters, top_words, avg_len, unique_words, lexical_diversity, sentiment)
     print("===REPORT===")
     for key, value in report.items():
         print(f"{key}: {value}")
